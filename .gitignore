@@ -1,0 +1,6 @@
+app.db
+app.db-*
+*.db-journal
+/endpoint-interview-prep
+.idea/
+.vscode/
