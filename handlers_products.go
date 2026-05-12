@@ -169,6 +169,13 @@ func getProduct(db *sql.DB) http.HandlerFunc {
 //   - SELECT the row back so timestamps are populated, OR INSERT ... RETURNING
 func createProduct(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req Product
+		err := decodeJSON(r, &req)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement createProduct")
 	}
