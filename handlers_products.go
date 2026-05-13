@@ -176,6 +176,36 @@ func createProduct(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, err.Error())
 		}
 
+		// validate request values
+		if req.SKU == "" {
+			writeError(w, http.StatusBadRequest, "SKU cannot be empty")
+		}
+		if req.Name == "" {
+			writeError(w, http.StatusBadRequest, "Name cannot be empty")
+		}
+		if req.PriceCents < 0 {
+			writeError(w, http.StatusBadRequest, "Price cannot be negative")
+		}
+		if req.StockQuantity < 0 {
+			writeError(w, http.StatusBadRequest, "Quantity cannot be negative")
+		}
+
+		// write query
+		_, err = db.ExecContext(r.Context(),
+			`INSERT INTO products 
+			(sku, name, description, price_cents, stock_quantity, category)
+			VALUES
+			(?, ?, ?, ?, ?, ?)`,
+			req.SKU, req.Name, req.Description, req.PriceCents, req.StockQuantity,
+			req.Category,
+		)
+		if err != nil {
+			if isUniqueConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement createProduct")
 	}
