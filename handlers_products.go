@@ -174,20 +174,25 @@ func createProduct(db *sql.DB) http.HandlerFunc {
 		err := decodeJSON(r, &req)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
+			return
 		}
 
 		// validate request values
 		if req.SKU == "" {
 			writeError(w, http.StatusBadRequest, "SKU cannot be empty")
+			return
 		}
 		if req.Name == "" {
 			writeError(w, http.StatusBadRequest, "Name cannot be empty")
+			return
 		}
 		if req.PriceCents < 0 {
 			writeError(w, http.StatusBadRequest, "Price cannot be negative")
+			return
 		}
 		if req.StockQuantity < 0 {
 			writeError(w, http.StatusBadRequest, "Quantity cannot be negative")
+			return
 		}
 
 		// write query
@@ -196,18 +201,19 @@ func createProduct(db *sql.DB) http.HandlerFunc {
 			(sku, name, description, price_cents, stock_quantity, category)
 			VALUES
 			(?, ?, ?, ?, ?, ?)`,
-			req.SKU, req.Name, req.Description, req.PriceCents, req.StockQuantity,
-			req.Category,
+			req.SKU, req.Name, req.Description, req.PriceCents,
+			req.StockQuantity, req.Category,
 		)
 		if err != nil {
 			if isUniqueConstraintErr(err) {
 				writeError(w, http.StatusConflict, err.Error())
+				return
 			}
 			writeError(w, http.StatusInternalServerError, err.Error())
+			return
 		}
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement createProduct")
+		//writeJSON(w, http.StatusCreated)
 	}
 }
 
