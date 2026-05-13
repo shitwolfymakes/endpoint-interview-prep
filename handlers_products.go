@@ -324,10 +324,21 @@ func updateProduct(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// return values
-
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement updateProduct")
+		// query and return the new row
+		var response Product
+		err = db.QueryRowContext(r.Context(), `
+			SELECT id, sku, name, description, price_cents,
+			       stock_quantity, category, created_at, updated_at
+			FROM products WHERE id = ?`, id).
+			Scan(&response.ID, &response.SKU, &response.Name,
+				&response.Description, &response.PriceCents,
+				&response.StockQuantity, &response.Category,
+				&response.CreatedAt, &response.UpdatedAt)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
 	}
 }
 
