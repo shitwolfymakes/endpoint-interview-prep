@@ -3,9 +3,11 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -283,6 +285,42 @@ func updateProduct(db *sql.DB) http.HandlerFunc {
 		}
 		if req.StockQuantity < 0 {
 			writeError(w, http.StatusBadRequest, "Quantity cannot be negative")
+			return
+		}
+
+		// execute the db call
+		result, err := db.ExecContext(r.Context(),
+			`UPDATE products SET
+			sku = ?,
+			name = ?,
+			description = ?,
+			price_cents = ?,
+			stock_quantity = ?,
+			category = ?,
+			updated_at = ?
+			WHERE id = ?`,
+			req.SKU, req.Name, req.Description, req.PriceCents,
+			req.StockQuantity, req.Category,
+			time.Now(),
+			id,
+		)
+		if err != nil {
+			// check that SKU isn't changed to one that already exists
+			if isUniqueConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		// check that the ID was found
+		n, err := result.RowsAffected()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if n == 0 {
+			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
 			return
 		}
 
