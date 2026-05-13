@@ -34,6 +34,67 @@ func revenueReport(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// warehouseUtilization: GET /reports/warehouse-utilization
+//
+// For every active warehouse, returns capacity, total used units (SUM of
+// warehouse_inventory.quantity), utilization percent, and active personnel
+// count. Closed warehouses are excluded by default; pass ?include_closed=1
+// to include them.
+//
+// Response:
+//
+//	{ "items": [
+//	    { "warehouse_id": int, "code": string, "capacity_units": int,
+//	      "used_units": int, "utilization_pct": float,
+//	      "personnel_count": int },
+//	    ...
+//	  ]
+//	}
+//
+// Status codes:
+//
+//	200  on success (items may be empty)
+//
+// Hints:
+//   - LEFT JOIN warehouse_inventory and LEFT JOIN personnel (with the
+//     terminated_at IS NULL guard) so a warehouse with zero inventory or
+//     zero personnel still shows up.
+//   - GROUP BY warehouse id; use COALESCE(SUM(...),0) to coerce NULL to 0.
+//   - utilization_pct is used_units * 100.0 / capacity_units. Guard against
+//     divide-by-zero (capacity 0 -> report 0.0).
+func warehouseUtilization(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement warehouseUtilization")
+	}
+}
+
+// headcount: GET /reports/headcount?warehouse_id=&role=
+//
+// Returns counts of active personnel (terminated_at IS NULL), grouped by
+// role. If warehouse_id is given, scope to that warehouse only. If role is
+// given, scope to that role only.
+//
+// Response:
+//
+//	{ "items": [ {"role": string, "count": int}, ... ], "total": int }
+//
+// Status codes:
+//
+//	200  on success (items may be empty)
+//	400  on non-integer warehouse_id or unknown role
+//
+// Hints:
+//   - GROUP BY role; ORDER BY role.
+//   - Add WHERE clauses based on query params (the listProducts handler
+//     shows the "append to args" pattern).
+func headcount(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement headcount")
+	}
+}
+
 // topProducts: GET /reports/top-products?limit=10
 //
 // Returns the top N products by total revenue generated (sum of

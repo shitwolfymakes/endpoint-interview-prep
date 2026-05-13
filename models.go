@@ -47,3 +47,40 @@ type OrderItem struct {
 	UnitPriceCents int64  `json:"unit_price_cents"`
 	ProductName    string `json:"product_name,omitempty"`
 }
+
+// Warehouse is a physical storage location. capacity_units is the maximum
+// total number of product units it can hold, summed across every product type.
+// status is either 'active' or 'closed'.
+type Warehouse struct {
+	ID            int64  `json:"id"`
+	Code          string `json:"code"`
+	Name          string `json:"name"`
+	Address       string `json:"address"`
+	CapacityUnits int    `json:"capacity_units"`
+	Status        string `json:"status"`
+	CreatedAt     string `json:"created_at"`
+	UpdatedAt     string `json:"updated_at"`
+}
+
+// InventoryLine is one (product, quantity) row at a warehouse. ProductName is
+// populated by handlers that join against the products table.
+type InventoryLine struct {
+	WarehouseID int64  `json:"warehouse_id"`
+	ProductID   int64  `json:"product_id"`
+	Quantity    int    `json:"quantity"`
+	ProductName string `json:"product_name,omitempty"`
+}
+
+// Personnel is an employee assigned to at most one warehouse. WarehouseID is
+// a pointer so it can be null (unassigned / newly hired / terminated).
+// TerminatedAt is "" for active employees.
+type Personnel struct {
+	ID           int64      `json:"id"`
+	Email        string     `json:"email"`
+	Name         string     `json:"name"`
+	Role         string     `json:"role"`
+	WarehouseID  *int64     `json:"warehouse_id"`
+	HiredAt      string     `json:"hired_at"`
+	TerminatedAt string     `json:"terminated_at,omitempty"`
+	Warehouse    *Warehouse `json:"warehouse,omitempty"`
+}

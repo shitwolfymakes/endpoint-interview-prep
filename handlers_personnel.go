@@ -1,0 +1,148 @@
+package main
+
+import (
+	"database/sql"
+	"net/http"
+)
+
+// ============================================================================
+// STUBS — implement these. Run `go test ./...` to see which tests fail.
+// ============================================================================
+
+// createPersonnel: POST /personnel
+//
+// Request body:
+//
+//	{
+//	  "email":        string (required, unique)
+//	  "name":         string (required)
+//	  "role":         string (required; one of: manager, clerk, picker, driver)
+//	  "warehouse_id": int    (optional; if present, must reference an active warehouse)
+//	}
+//
+// Status codes:
+//
+//	201  on success — return the created person
+//	400  on invalid JSON, missing required fields, or invalid role
+//	409  on duplicate email (UNIQUE), or warehouse_id referring to a
+//	     non-existent or closed warehouse
+//
+// Mirrors createProduct.
+func createPersonnel(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement createPersonnel")
+	}
+}
+
+// updatePersonnel: PUT /personnel/{id}
+//
+// Replaces every editable field. Same body shape as createPersonnel.
+//
+// Status codes:
+//
+//	200  on success — return the updated person
+//	400  on invalid JSON, invalid {id}, or invalid role
+//	404  if no person has that id
+//	409  on duplicate email, or warehouse_id referring to a non-existent
+//	     or closed warehouse
+func updatePersonnel(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement updatePersonnel")
+	}
+}
+
+// deletePersonnel: DELETE /personnel/{id}
+//
+// Status codes:
+//
+//	204  on success (empty body)
+//	400  on invalid {id}
+//	404  if no person has that id
+//
+// Note: this is a hard delete. To mark someone as no-longer-working, set
+// their terminated_at via the regular PUT instead.
+func deletePersonnel(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement deletePersonnel")
+	}
+}
+
+// getPersonnel: GET /personnel/{id}
+//
+// Returns one person with their current warehouse embedded (via JOIN). When
+// the person is unassigned (warehouse_id IS NULL), the embedded warehouse
+// should be null/omitted.
+//
+// Status codes:
+//
+//	200  on success
+//	400  on non-integer {id}
+//	404  if no person has that id
+//
+// Mirrors getOrder, which embeds Customer the same way.
+func getPersonnel(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement getPersonnel")
+	}
+}
+
+// reassignPersonnel: PATCH /personnel/{id}/reassign
+//
+// Moves a person to a different warehouse atomically. Passing
+// "warehouse_id": null is allowed and unassigns the person.
+//
+// Request body:
+//
+//	{ "warehouse_id": int | null }
+//
+// Status codes:
+//
+//	200  on success — return the updated person
+//	400  on invalid JSON or invalid {id}
+//	404  if no person has that id
+//	409  if the target warehouse doesn't exist, is closed, or the person
+//	     is already terminated (terminated_at IS NOT NULL)
+//
+// Hint: a single guarded UPDATE works. Example shape:
+//
+//	UPDATE personnel
+//	SET    warehouse_id = ?
+//	WHERE  id = ? AND terminated_at IS NULL
+//	  AND  (? IS NULL OR EXISTS (SELECT 1 FROM warehouses
+//	                             WHERE id = ? AND status = 'active'))
+//
+// RowsAffected == 0 -> distinguish missing vs terminated vs bad target with
+// a follow-up SELECT.
+// Mirrors adjustStock.
+func reassignPersonnel(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement reassignPersonnel")
+	}
+}
+
+// bulkCreatePersonnel: POST /personnel/bulk
+//
+// Inserts every row in a single transaction; roll the whole batch back on
+// any failure. Same conventions as bulkCreateProducts.
+//
+// Request body:
+//
+//	{ "personnel": [ {email, name, role, warehouse_id?}, ... ] }
+//
+// Status codes:
+//
+//	201  on success — return {"items": [...]}
+//	400  on invalid JSON, empty list, or any item failing validation
+//	409  if any email collides with an existing person, or any warehouse_id
+//	     refers to a missing or closed warehouse
+func bulkCreatePersonnel(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = db
+		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreatePersonnel")
+	}
+}

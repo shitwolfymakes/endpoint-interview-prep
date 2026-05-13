@@ -49,3 +49,50 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order   ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
+
+-- Warehouses hold a flat maximum number of product units (capacity_units) and
+-- can store any mix of products. The status field gates whether a warehouse
+-- can be used at all.
+CREATE TABLE IF NOT EXISTS warehouses (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    code           TEXT    NOT NULL UNIQUE,
+    name           TEXT    NOT NULL,
+    address        TEXT    NOT NULL DEFAULT '',
+    capacity_units INTEGER NOT NULL CHECK (capacity_units >= 0),
+    status         TEXT    NOT NULL DEFAULT 'active'
+                   CHECK (status IN ('active','closed')),
+    created_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+    updated_at     TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_warehouses_status ON warehouses(status);
+
+-- warehouse_inventory is the per-warehouse breakdown of which products are
+-- stored where, and how many of each. SUM(quantity) per warehouse must stay
+-- <= the warehouse's capacity_units (enforced in handler code, not by SQL).
+-- This is separate from products.stock_quantity, which is the company-wide
+-- total — the two are deliberately not auto-synced in this practice repo.
+CREATE TABLE IF NOT EXISTS warehouse_inventory (
+    warehouse_id INTEGER NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+    product_id   INTEGER NOT NULL REFERENCES products(id),
+    quantity     INTEGER NOT NULL CHECK (quantity >= 0),
+    PRIMARY KEY (warehouse_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_warehouse_inventory_product ON warehouse_inventory(product_id);
+
+-- Personnel are employees assigned to (at most) one warehouse. warehouse_id
+-- is nullable to allow "unassigned" staff (newly hired, on leave, terminated).
+-- terminated_at is NULL while the employee is active.
+CREATE TABLE IF NOT EXISTS personnel (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    email         TEXT    NOT NULL UNIQUE,
+    name          TEXT    NOT NULL,
+    role          TEXT    NOT NULL CHECK (role IN ('manager','clerk','picker','driver')),
+    warehouse_id  INTEGER REFERENCES warehouses(id),
+    hired_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S','now')),
+    terminated_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_personnel_warehouse ON personnel(warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_personnel_role      ON personnel(role);

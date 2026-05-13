@@ -83,6 +83,122 @@ func TestRevenueReport(t *testing.T) {
 	})
 }
 
+func TestWarehouseUtilization(t *testing.T) {
+	t.Run("returns active warehouses with utilization", func(t *testing.T) {
+		srv, _ := newTestServer(t)
+		rec := do(t, srv, "GET", "/reports/warehouse-utilization", nil)
+		expectStatus(t, rec, 200)
+		var resp struct {
+			Items []struct {
+				WarehouseID    int64   `json:"warehouse_id"`
+				Code           string  `json:"code"`
+				CapacityUnits  int     `json:"capacity_units"`
+				UsedUnits      int     `json:"used_units"`
+				UtilizationPct float64 `json:"utilization_pct"`
+				PersonnelCount int     `json:"personnel_count"`
+			} `json:"items"`
+		}
+		decodeBody(t, rec, &resp)
+		// 3 active warehouses by default: WH-NORTH, WH-SOUTH, WH-EAST.
+		if len(resp.Items) != 3 {
+			t.Fatalf("expected 3 active warehouses, got %d", len(resp.Items))
+		}
+
+		// Find WH-NORTH and check its numbers.
+		var north *struct {
+			WarehouseID    int64   `json:"warehouse_id"`
+			Code           string  `json:"code"`
+			CapacityUnits  int     `json:"capacity_units"`
+			UsedUnits      int     `json:"used_units"`
+			UtilizationPct float64 `json:"utilization_pct"`
+			PersonnelCount int     `json:"personnel_count"`
+		}
+		for i := range resp.Items {
+			if resp.Items[i].Code == "WH-NORTH" {
+				north = &resp.Items[i]
+				break
+			}
+		}
+		if north == nil {
+			t.Fatalf("WH-NORTH not in items: %+v", resp.Items)
+		}
+		// WH-NORTH: 250 used / 1000 capacity, 3 active personnel.
+		if north.UsedUnits != 250 {
+			t.Errorf("expected used=250, got %d", north.UsedUnits)
+		}
+		if north.PersonnelCount != 3 {
+			t.Errorf("expected personnel_count=3, got %d", north.PersonnelCount)
+		}
+		if north.UtilizationPct < 24.9 || north.UtilizationPct > 25.1 {
+			t.Errorf("expected utilization ~25.0, got %f", north.UtilizationPct)
+		}
+	})
+
+	t.Run("includes closed when requested", func(t *testing.T) {
+		srv, _ := newTestServer(t)
+		rec := do(t, srv, "GET", "/reports/warehouse-utilization?include_closed=1", nil)
+		expectStatus(t, rec, 200)
+		var resp struct {
+			Items []struct {
+				Code string `json:"code"`
+			} `json:"items"`
+		}
+		decodeBody(t, rec, &resp)
+		if len(resp.Items) != 4 {
+			t.Fatalf("expected 4 warehouses (incl closed), got %d", len(resp.Items))
+		}
+	})
+}
+
+func TestHeadcount(t *testing.T) {
+	t.Run("returns counts by role for active personnel", func(t *testing.T) {
+		srv, _ := newTestServer(t)
+		rec := do(t, srv, "GET", "/reports/headcount", nil)
+		expectStatus(t, rec, 200)
+		var resp struct {
+			Items []struct {
+				Role  string `json:"role"`
+				Count int    `json:"count"`
+			} `json:"items"`
+			Total int `json:"total"`
+		}
+		decodeBody(t, rec, &resp)
+		// Active personnel: 2 managers, 1 clerk, 1 picker, 1 driver = 5 total.
+		// (Ivan is terminated so excluded.)
+		if resp.Total != 5 {
+			t.Errorf("expected total=5, got %d", resp.Total)
+		}
+		byRole := map[string]int{}
+		for _, it := range resp.Items {
+			byRole[it.Role] = it.Count
+		}
+		if byRole["manager"] != 2 || byRole["clerk"] != 1 ||
+			byRole["picker"] != 1 || byRole["driver"] != 1 {
+			t.Errorf("unexpected role counts: %+v", byRole)
+		}
+	})
+
+	t.Run("scopes to a single warehouse", func(t *testing.T) {
+		srv, _ := newTestServer(t)
+		// WH-NORTH has 3 active personnel: manager, clerk, picker.
+		rec := do(t, srv, "GET", "/reports/headcount?warehouse_id=1", nil)
+		expectStatus(t, rec, 200)
+		var resp struct {
+			Total int `json:"total"`
+		}
+		decodeBody(t, rec, &resp)
+		if resp.Total != 3 {
+			t.Errorf("expected 3 at WH-NORTH, got %d", resp.Total)
+		}
+	})
+
+	t.Run("rejects non-integer warehouse_id", func(t *testing.T) {
+		srv, _ := newTestServer(t)
+		rec := do(t, srv, "GET", "/reports/headcount?warehouse_id=abc", nil)
+		expectStatus(t, rec, 400)
+	})
+}
+
 func TestTopProducts(t *testing.T) {
 	t.Run("returns products ranked by revenue", func(t *testing.T) {
 		srv, _ := newTestServer(t)

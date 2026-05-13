@@ -3,6 +3,11 @@
 Listed roughly in order of difficulty. Implement them in the order shown —
 later tiers reuse patterns from earlier ones.
 
+Each tier contains multiple endpoints across three resources (`products`,
+`warehouses`, `personnel`) so you can drill the same pattern several times.
+If the first one in a tier feels hard, do it slowly; the others should feel
+mechanical after that.
+
 For each endpoint:
 1. Read the doc-comment in the handler file (it lists the contract,
    status codes, and hints).
@@ -10,70 +15,91 @@ For each endpoint:
    `go test -v -run <TestName> ./...`
 3. Implement until green.
 
+## Reference implementations — read these first
+
 | # | Tier | Method   | Path                        | Handler / Test |
 |--:|:-----|:---------|:----------------------------|:---------------|
-| 0 | ref  | GET      | `/health`                   | `health` / `TestHealth` (already done) |
-| 1 | ref  | GET      | `/products`                 | `listProducts` / `TestListProducts` (already done) |
-| 2 | ref  | GET      | `/products/{id}`            | `getProduct` / `TestGetProduct` (already done) |
+| 0 | ref  | GET      | `/health`                   | `health` / `TestHealth` |
+| 1 | ref  | GET      | `/products`                 | `listProducts` / `TestListProducts` |
+| 2 | ref  | GET      | `/products/{id}`            | `getProduct` / `TestGetProduct` |
 
 ## Tier 1 — basic CRUD
 
 You write JSON bodies, parse path params, distinguish 200/201/204 from
 400/404/409, and detect `UNIQUE constraint failed` from the SQLite error.
 
-| # | Method   | Path                        | Handler / Test |
-|--:|:---------|:----------------------------|:---------------|
-| 3 | POST     | `/products`                 | `createProduct` / `TestCreateProduct` |
-| 4 | PUT      | `/products/{id}`            | `updateProduct` / `TestUpdateProduct` |
-| 5 | DELETE   | `/products/{id}`            | `deleteProduct` / `TestDeleteProduct` |
+| Method   | Path                        | Handler / Test |
+|:---------|:----------------------------|:---------------|
+| POST     | `/products`                 | `createProduct` / `TestCreateProduct` |
+| PUT      | `/products/{id}`            | `updateProduct` / `TestUpdateProduct` |
+| DELETE   | `/products/{id}`            | `deleteProduct` / `TestDeleteProduct` |
+| POST     | `/warehouses`               | `createWarehouse` / `TestCreateWarehouse` |
+| PUT      | `/warehouses/{id}`          | `updateWarehouse` / `TestUpdateWarehouse` |
+| DELETE   | `/warehouses/{id}`          | `deleteWarehouse` / `TestDeleteWarehouse` |
+| POST     | `/personnel`                | `createPersonnel` / `TestCreatePersonnel` |
+| PUT      | `/personnel/{id}`           | `updatePersonnel` / `TestUpdatePersonnel` |
+| DELETE   | `/personnel/{id}`           | `deletePersonnel` / `TestDeletePersonnel` |
 
 ## Tier 2 — joins & nested resources
 
 You write SQL with `JOIN`, scan into a struct that embeds another struct,
 and decide whether an empty result is `200 []` or `404`.
 
-| # | Method   | Path                        | Handler / Test |
-|--:|:---------|:----------------------------|:---------------|
-| 6 | GET      | `/customers/{id}`           | `getCustomer` / `TestGetCustomer` |
-| 7 | GET      | `/customers/{id}/orders`    | `listCustomerOrders` / `TestListCustomerOrders` |
-| 8 | GET      | `/orders/{id}`              | `getOrder` / `TestGetOrder` |
+| Method   | Path                              | Handler / Test |
+|:---------|:----------------------------------|:---------------|
+| GET      | `/customers/{id}`                 | `getCustomer` / `TestGetCustomer` |
+| GET      | `/customers/{id}/orders`          | `listCustomerOrders` / `TestListCustomerOrders` |
+| GET      | `/orders/{id}`                    | `getOrder` / `TestGetOrder` |
+| GET      | `/warehouses/{id}`                | `getWarehouse` / `TestGetWarehouse` |
+| GET      | `/warehouses/{id}/inventory`      | `listWarehouseInventory` / `TestListWarehouseInventory` |
+| GET      | `/warehouses/{id}/personnel`      | `listWarehousePersonnel` / `TestListWarehousePersonnel` |
+| GET      | `/personnel/{id}`                 | `getPersonnel` / `TestGetPersonnel` |
 
 ## Tier 3 — atomic updates
 
 A single SQL statement does the validation and the mutation together,
 using a guarded `WHERE`.
 
-| # | Method   | Path                        | Handler / Test |
-|--:|:---------|:----------------------------|:---------------|
-| 9 | PATCH    | `/products/{id}/stock`      | `adjustStock` / `TestAdjustStock` |
+| Method   | Path                                          | Handler / Test |
+|:---------|:----------------------------------------------|:---------------|
+| PATCH    | `/products/{id}/stock`                        | `adjustStock` / `TestAdjustStock` |
+| PATCH    | `/warehouses/{id}/capacity`                   | `adjustWarehouseCapacity` / `TestAdjustWarehouseCapacity` |
+| PATCH    | `/warehouses/{id}/inventory/{product_id}`     | `setWarehouseInventory` / `TestSetWarehouseInventory` |
+| PATCH    | `/personnel/{id}/reassign`                    | `reassignPersonnel` / `TestReassignPersonnel` |
 
 ## Tier 4 — multi-step transactions
 
 Validate, mutate multiple rows, commit; on any failure, roll everything
 back. This is the heart of "real" business logic in an interview.
 
-| # | Method   | Path                        | Handler / Test |
-|--:|:---------|:----------------------------|:---------------|
-| 10 | POST    | `/orders`                   | `createOrder` / `TestCreateOrder` |
-| 11 | POST    | `/orders/{id}/cancel`       | `cancelOrder` / `TestCancelOrder` |
+| Method   | Path                              | Handler / Test |
+|:---------|:----------------------------------|:---------------|
+| POST     | `/orders`                         | `createOrder` / `TestCreateOrder` |
+| POST     | `/orders/{id}/cancel`             | `cancelOrder` / `TestCancelOrder` |
+| POST     | `/warehouses/{id}/transfer`       | `transferUnits` / `TestTransferUnits` |
+| POST     | `/warehouses/{id}/close`          | `closeWarehouse` / `TestCloseWarehouse` |
 
 ## Tier 5 — aggregations / reporting
 
 `GROUP BY`, `SUM`, NULL handling, and translating query params into
 optional `WHERE` clauses.
 
-| # | Method   | Path                        | Handler / Test |
-|--:|:---------|:----------------------------|:---------------|
-| 12 | GET     | `/reports/revenue`          | `revenueReport` / `TestRevenueReport` |
-| 13 | GET     | `/reports/top-products`     | `topProducts` / `TestTopProducts` |
+| Method   | Path                                  | Handler / Test |
+|:---------|:--------------------------------------|:---------------|
+| GET      | `/reports/revenue`                    | `revenueReport` / `TestRevenueReport` |
+| GET      | `/reports/top-products`               | `topProducts` / `TestTopProducts` |
+| GET      | `/reports/warehouse-utilization`      | `warehouseUtilization` / `TestWarehouseUtilization` |
+| GET      | `/reports/headcount`                  | `headcount` / `TestHeadcount` |
 
 ## Tier 6 — bulk operations
 
 Same patterns as before, but in a transaction across many rows.
 
-| # | Method   | Path                        | Handler / Test |
-|--:|:---------|:----------------------------|:---------------|
-| 14 | POST    | `/products/bulk`            | `bulkCreateProducts` / `TestBulkCreateProducts` |
+| Method   | Path                        | Handler / Test |
+|:---------|:----------------------------|:---------------|
+| POST     | `/products/bulk`            | `bulkCreateProducts` / `TestBulkCreateProducts` |
+| POST     | `/warehouses/bulk`          | `bulkCreateWarehouses` / `TestBulkCreateWarehouses` |
+| POST     | `/personnel/bulk`           | `bulkCreatePersonnel` / `TestBulkCreatePersonnel` |
 
 ---
 

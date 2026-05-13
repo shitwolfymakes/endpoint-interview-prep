@@ -38,9 +38,34 @@ func newRouter(db *sql.DB) http.Handler {
 		r.Post("/{id}/cancel", cancelOrder(db))
 	})
 
+	r.Route("/warehouses", func(r chi.Router) {
+		r.Post("/", createWarehouse(db))
+		r.Post("/bulk", bulkCreateWarehouses(db))
+		r.Get("/{id}", getWarehouse(db))
+		r.Put("/{id}", updateWarehouse(db))
+		r.Delete("/{id}", deleteWarehouse(db))
+		r.Get("/{id}/inventory", listWarehouseInventory(db))
+		r.Get("/{id}/personnel", listWarehousePersonnel(db))
+		r.Patch("/{id}/capacity", adjustWarehouseCapacity(db))
+		r.Patch("/{id}/inventory/{product_id}", setWarehouseInventory(db))
+		r.Post("/{id}/transfer", transferUnits(db))
+		r.Post("/{id}/close", closeWarehouse(db))
+	})
+
+	r.Route("/personnel", func(r chi.Router) {
+		r.Post("/", createPersonnel(db))
+		r.Post("/bulk", bulkCreatePersonnel(db))
+		r.Get("/{id}", getPersonnel(db))
+		r.Put("/{id}", updatePersonnel(db))
+		r.Delete("/{id}", deletePersonnel(db))
+		r.Patch("/{id}/reassign", reassignPersonnel(db))
+	})
+
 	r.Route("/reports", func(r chi.Router) {
 		r.Get("/revenue", revenueReport(db))
 		r.Get("/top-products", topProducts(db))
+		r.Get("/warehouse-utilization", warehouseUtilization(db))
+		r.Get("/headcount", headcount(db))
 	})
 
 	return r
