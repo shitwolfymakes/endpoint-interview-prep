@@ -12,7 +12,8 @@ INSERT INTO products (id, sku, name, description, price_cents, stock_quantity, c
     (3, 'GADGET-001', 'Basic Gadget',      'An entry-level gadget',               999, 200, 'gadgets', '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
     (4, 'GADGET-002', 'Pro Gadget',        'A professional-grade gadget',        7999,  25, 'gadgets', '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
     (5, 'TOOL-001',   'Claw Hammer',       'Standard 16oz claw hammer',          2499,  75, 'tools',   '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
-    (6, 'TOOL-002',   'Screwdriver Set',   '6-piece screwdriver set',            3499,   0, 'tools',   '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+    (6, 'TOOL-002',   'Screwdriver Set',   '6-piece screwdriver set',            3499,   0, 'tools',   '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+    (7, 'TOOL-003',   'Tape Measure',      '25ft retractable tape measure',      1299,  40, 'tools',   '2026-01-01 00:00:00', '2026-01-01 00:00:00');
 
 INSERT INTO orders (id, customer_id, status, total_cents, created_at, updated_at) VALUES
     (1, 1, 'paid',    6998, '2026-04-01 10:00:00', '2026-04-01 10:00:00'),

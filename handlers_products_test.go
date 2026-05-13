@@ -22,8 +22,8 @@ func TestListProducts(t *testing.T) {
 			Offset int       `json:"offset"`
 		}
 		decodeBody(t, rec, &resp)
-		if len(resp.Items) != 6 {
-			t.Fatalf("expected 6 items, got %d", len(resp.Items))
+		if len(resp.Items) != 7 {
+			t.Fatalf("expected 7 items, got %d", len(resp.Items))
 		}
 		if resp.Limit != 50 || resp.Offset != 0 {
 			t.Errorf("expected limit=50 offset=0, got limit=%d offset=%d", resp.Limit, resp.Offset)
@@ -247,11 +247,11 @@ func TestUpdateProduct(t *testing.T) {
 func TestDeleteProduct(t *testing.T) {
 	t.Run("deletes a product not referenced by any order", func(t *testing.T) {
 		srv, _ := newTestServer(t)
-		// Product 5 (TOOL-001) has no order_items rows.
-		rec := do(t, srv, "DELETE", "/products/5", nil)
+		// Product 7 (TOOL-003) has no order_items or warehouse_inventory rows.
+		rec := do(t, srv, "DELETE", "/products/7", nil)
 		expectStatus(t, rec, 204)
 
-		rec2 := do(t, srv, "GET", "/products/5", nil)
+		rec2 := do(t, srv, "GET", "/products/7", nil)
 		expectStatus(t, rec2, 404)
 	})
 
