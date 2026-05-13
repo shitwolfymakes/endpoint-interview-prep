@@ -261,6 +261,24 @@ func updateProduct(db *sql.DB) http.HandlerFunc {
 
 		// validate request values
 
+		// validate request values
+		if req.SKU == "" {
+			writeError(w, http.StatusBadRequest, "SKU cannot be empty")
+			return
+		}
+		if req.Name == "" {
+			writeError(w, http.StatusBadRequest, "Name cannot be empty")
+			return
+		}
+		if req.PriceCents < 0 {
+			writeError(w, http.StatusBadRequest, "Price cannot be negative")
+			return
+		}
+		if req.StockQuantity < 0 {
+			writeError(w, http.StatusBadRequest, "Quantity cannot be negative")
+			return
+		}
+
 		// execute the db call
 
 		// return values
