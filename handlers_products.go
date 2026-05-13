@@ -353,6 +353,13 @@ func updateProduct(db *sql.DB) http.HandlerFunc {
 //	     helpful error message
 func deleteProduct(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// parse path params
+		id, err := strconv.Atoi(chi.URLParam(r, "id"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement deleteProduct")
 	}
