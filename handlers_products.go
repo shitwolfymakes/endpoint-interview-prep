@@ -195,8 +195,8 @@ func createProduct(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// write query
-		_, err = db.ExecContext(r.Context(),
+		// Insert the row
+		result, err := db.ExecContext(r.Context(),
 			`INSERT INTO products 
 			(sku, name, description, price_cents, stock_quantity, category)
 			VALUES
@@ -213,7 +213,26 @@ func createProduct(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		//writeJSON(w, http.StatusCreated)
+		// query and return the new row
+		id, err := result.LastInsertId()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		var response Product
+		err = db.QueryRowContext(r.Context(), `
+			SELECT id, sku, name, description, price_cents,
+			       stock_quantity, category, created_at, updated_at
+			FROM products WHERE id = ?`, id).
+			Scan(&response.ID, &response.SKU, &response.Name,
+				&response.Description, &response.PriceCents,
+				&response.StockQuantity, &response.Category,
+				&response.CreatedAt, &response.UpdatedAt)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusCreated, response)
 	}
 }
 
