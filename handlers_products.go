@@ -360,6 +360,31 @@ func deleteProduct(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		result, err := db.ExecContext(r.Context(),
+			`DELETE FROM products
+			WHERE id = ?`,
+			id,
+		)
+		if err != nil {
+			// check for foreign key errors
+			if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		// check that the ID was found
+		n, err := result.RowsAffected()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if n == 0 {
+			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
+			return
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement deleteProduct")
 	}
