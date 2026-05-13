@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // ============================================================================
@@ -259,7 +261,12 @@ func updateProduct(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// validate request values
+		// parse path params
+		id, err := strconv.Atoi(chi.URLParam(r, "id"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
 		// validate request values
 		if req.SKU == "" {
@@ -278,8 +285,6 @@ func updateProduct(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "Quantity cannot be negative")
 			return
 		}
-
-		// execute the db call
 
 		// return values
 
