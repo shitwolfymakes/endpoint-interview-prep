@@ -251,6 +251,20 @@ func createProduct(db *sql.DB) http.HandlerFunc {
 // Hint: bump updated_at to CURRENT_TIMESTAMP in the UPDATE.
 func updateProduct(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req Product
+		err := decodeJSON(r, &req)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// validate request values
+
+		// execute the db call
+
+		// return values
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement updateProduct")
 	}
