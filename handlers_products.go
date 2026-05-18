@@ -531,7 +531,72 @@ func bulkCreateProducts(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreateProducts")
+		// insert the rows
+		// create transaction object
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer tx.Rollback() // CRITICAL
+
+		// insert the rows
+		type response struct {
+			Items []Product `json:"items"`
+		}
+		var items response
+		for _, prod := range req.Products {
+			// insert the row
+			result, err := tx.ExecContext(r.Context(),
+				`INSERT INTO products 
+				(sku, name, description, price_cents, stock_quantity, category)
+				VALUES
+				(?, ?, ?, ?, ?, ?)`,
+				prod.SKU, prod.Name, prod.Description, prod.PriceCents,
+				prod.StockQuantity, prod.Category,
+			)
+			if err != nil {
+				if isUniqueConstraintErr(err) {
+					writeJSON(w, http.StatusConflict, prod)
+					return
+				}
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			// query and return the new row
+			id, err := result.LastInsertId()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			var response Product
+			err = tx.QueryRowContext(r.Context(),
+				`SELECT id, sku, name, description, price_cents,
+			    stock_quantity, category, created_at, updated_at
+				FROM products WHERE id = ?`, id).
+				Scan(&response.ID, &response.SKU, &response.Name,
+					&response.Description, &response.PriceCents,
+					&response.StockQuantity, &response.Category,
+					&response.CreatedAt, &response.UpdatedAt)
+			if err != nil {
+				// check that SKU isn't one that already exists
+				if isUniqueConstraintErr(err) {
+					writeError(w, http.StatusConflict, err.Error())
+					return
+				}
+				writeJSON(w, http.StatusInternalServerError, prod)
+				return
+			}
+			items.Items = append(items.Items, response)
+		}
+
+		// commit the transaction
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, items)
 	}
 }
