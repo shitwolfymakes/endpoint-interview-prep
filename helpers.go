@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -72,4 +73,12 @@ func isCheckConstraintErr(err error) bool {
 // deleting a product still referenced by an order).
 func isFKeyConstraintErr(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "FOREIGN KEY constraint failed")
+}
+
+// rowsAffected reports whether an UPDATE/DELETE touched at least one row.
+// It does no HTTP work: callers inspect the result and choose the status
+// code (typically 404 when found is false, 500 on a non-nil error).
+func rowsAffected(result sql.Result) (found bool, num int64, err error) {
+	n, err := result.RowsAffected()
+	return n > 0, n, err
 }
