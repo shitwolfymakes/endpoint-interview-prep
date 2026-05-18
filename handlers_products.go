@@ -511,6 +511,26 @@ func bulkCreateProducts(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "list cannot be empty")
 		}
 
+		// validate request values
+		for _, prod := range req.Products {
+			if prod.SKU == "" {
+				writeJSON(w, http.StatusBadRequest, prod)
+				return
+			}
+			if prod.Name == "" {
+				writeJSON(w, http.StatusBadRequest, prod)
+				return
+			}
+			if prod.PriceCents < 0 {
+				writeJSON(w, http.StatusBadRequest, prod)
+				return
+			}
+			if prod.StockQuantity < 0 {
+				writeJSON(w, http.StatusBadRequest, prod)
+				return
+			}
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreateProducts")
 	}
