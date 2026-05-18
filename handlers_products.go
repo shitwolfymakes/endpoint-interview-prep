@@ -435,7 +435,6 @@ func adjustStock(db *sql.DB) http.HandlerFunc {
 			stock_quantity = stock_quantity + ?,
 			updated_at = ?
 			WHERE id = ?
-			AND stock_quantity + ? >= 0
 			`,
 			req.Delta,
 			time.Now(),
