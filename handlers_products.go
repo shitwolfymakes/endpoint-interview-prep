@@ -448,6 +448,8 @@ func adjustStock(db *sql.DB) http.HandlerFunc {
 				writeError(w, http.StatusUnprocessableEntity, err.Error())
 				return
 			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
 		}
 		// check that id was found
 		found, _, err := rowsAffected(result)
@@ -460,8 +462,21 @@ func adjustStock(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement adjustStock")
+		// query and return the row
+		var response Product
+		err = db.QueryRowContext(r.Context(), `
+			SELECT id, sku, name, description, price_cents,
+			       stock_quantity, category, created_at, updated_at
+			FROM products WHERE id = ?`, id).
+			Scan(&response.ID, &response.SKU, &response.Name,
+				&response.Description, &response.PriceCents,
+				&response.StockQuantity, &response.Category,
+				&response.CreatedAt, &response.UpdatedAt)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
 	}
 }
 
