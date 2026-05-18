@@ -33,6 +33,13 @@ import (
 // Mirrors createProduct in handlers_products.go.
 func createWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+
+		// validate request values
+
+		// run query
+
+		// query row for response
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement createWarehouse")
 	}
