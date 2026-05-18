@@ -580,11 +580,6 @@ func bulkCreateProducts(db *sql.DB) http.HandlerFunc {
 					&response.StockQuantity, &response.Category,
 					&response.CreatedAt, &response.UpdatedAt)
 			if err != nil {
-				// check that SKU isn't one that already exists
-				if isUniqueConstraintErr(err) {
-					writeError(w, http.StatusConflict, err.Error())
-					return
-				}
 				writeJSON(w, http.StatusInternalServerError, prod)
 				return
 			}
