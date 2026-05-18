@@ -499,6 +499,15 @@ func adjustStock(db *sql.DB) http.HandlerFunc {
 //   - Defer tx.Rollback() right after BeginTx; Commit makes the rollback a no-op
 func bulkCreateProducts(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req struct {
+			Products []Product `json:"products"`
+		}
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreateProducts")
 	}
