@@ -314,12 +314,12 @@ func updateProduct(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		// check that the ID was found
-		n, err := result.RowsAffected()
+		found, _, err := rowsAffected(result)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if n == 0 {
+		if !found {
 			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
 			return
 		}
@@ -375,12 +375,12 @@ func deleteProduct(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		// check that the ID was found
-		n, err := result.RowsAffected()
+		found, _, err := rowsAffected(result)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if n == 0 {
+		if !found {
 			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
 			return
 		}
@@ -423,9 +423,41 @@ func adjustStock(db *sql.DB) http.HandlerFunc {
 		}
 
 		// parse path params
-		id, err != idParam(r, "id")
+		id, err := idParam(r, "id")
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// execute db call
+		result, err := db.ExecContext(r.Context(),
+			`UPDATE products SET
+			stock_quantity = stock_quantity + ?,
+			updated_at = ?
+			WHERE id = ?
+			AND stock_quantity + ? >= 0
+			`,
+			req.Delta,
+			time.Now(),
+			id,
+			req.Delta,
+		)
+		if err != nil {
+			// check constraint for negative
+			if isCheckConstraintErr(err) {
+				writeError(w, http.StatusUnprocessableEntity, err.Error())
+				return
+			}
+		}
+		// check that id was found
+		found, _, err := rowsAffected(result)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !found {
+			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
+			return
 		}
 
 		_ = db
