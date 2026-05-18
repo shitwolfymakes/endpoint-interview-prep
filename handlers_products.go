@@ -413,6 +413,15 @@ func deleteProduct(db *sql.DB) http.HandlerFunc {
 // then check RowsAffected: 0 means the guard rejected it (or the row is missing).
 func adjustStock(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req struct {
+			Delta *int `json:"delta"`
+		}
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement adjustStock")
 	}
