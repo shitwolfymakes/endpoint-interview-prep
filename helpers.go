@@ -67,3 +67,9 @@ func isUniqueConstraintErr(err error) bool {
 func isCheckConstraintErr(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "CHECK constraint failed")
 }
+
+// isFKeyConstraintErr detects FOREIGN KEY-constraint violations (e.g.
+// deleting a product still referenced by an order).
+func isFKeyConstraintErr(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "FOREIGN KEY constraint failed")
+}

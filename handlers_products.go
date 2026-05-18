@@ -367,7 +367,7 @@ func deleteProduct(db *sql.DB) http.HandlerFunc {
 		)
 		if err != nil {
 			// check for foreign key errors
-			if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
+			if isFKeyConstraintErr(err) {
 				writeError(w, http.StatusConflict, err.Error())
 				return
 			}
