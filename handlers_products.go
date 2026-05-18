@@ -422,6 +422,12 @@ func adjustStock(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// parse path params
+		id, err != idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement adjustStock")
 	}
