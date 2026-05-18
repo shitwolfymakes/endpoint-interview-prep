@@ -507,6 +507,9 @@ func bulkCreateProducts(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		if len(req.Products) == 0 {
+			writeError(w, http.StatusBadRequest, "list cannot be empty")
+		}
 
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreateProducts")
