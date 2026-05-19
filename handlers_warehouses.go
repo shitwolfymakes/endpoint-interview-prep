@@ -906,7 +906,7 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			`SELECT COALESCE(SUM(quantity), 0)
 			FROM warehouse_inventory
 			WHERE warehouse_id = ? AND product_id = ?`,
-			req.ToWarehouseId, req.ProductId,
+			id, req.ProductId,
 		).Scan(&stock)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -939,47 +939,80 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		defer tx.Commit()
+		defer tx.Rollback()
 
 		// subtract from current warehouse
-		results, err := tx.ExecContext(r.Context(),
-			`UPDATE warehouse_inventory wi SET
-			quantity = quantity - ?
-			WHERE wi.warehouse_id = ? AND product_id = ?`,
+		_, err = tx.ExecContext(r.Context(),
+			`UPDATE warehouse_inventory SET 
+			quantity = quantity - ? 
+			WHERE warehouse_id = ? AND product_id = ?`,
 			req.Quantity, id, req.ProductId,
 		)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		cw_id, err := results.LastInsertId()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		// upsert into target warehouse
-		results, err = tx.ExecContext(r.Context(),
+		_, err = tx.ExecContext(r.Context(),
 			`INSERT INTO warehouse_inventory
 			(warehouse_id, product_id, quantity)
 			VALUES (?, ?, ?)
-			ON CONFLICT SET quantity = quantity + excluded.quantity`,
-			req.Quantity, id, req.ProductId,
+			ON CONFLICT (warehouse_id, product_id)
+			DO UPDATE SET quantity = quantity + excluded.quantity`,
+			req.ToWarehouseId, req.ProductId, req.Quantity,
 		)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		tw_id, err := results.LastInsertId()
+
+		// close the tx
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// return struct
+		type stockRemaining struct {
+			WarehouseId int `json:"warehouse_id"`
+			Remaining   int `json:"remaining"`
+		}
+		type response struct {
+			ProductId int            `json:"product_id"`
+			Quantity  int            `json:"quantity"`
+			From      stockRemaining `json:"from"`
+			To        stockRemaining `json:"to"`
+		}
+		var resp response
+		resp.ProductId = req.ProductId
+		resp.Quantity = req.Quantity
+		resp.From.WarehouseId = int(id)
+		resp.To.WarehouseId = int(req.ToWarehouseId)
+
+		// query inventory line for return
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COALESCE(SUM(quantity), 0)
+			FROM warehouse_inventory
+			WHERE warehouse_id = ? AND product_id = ?`,
+			id, req.ProductId,
+		).Scan(&resp.From.Remaining)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COALESCE(SUM(quantity), 0)
+			FROM warehouse_inventory
+			WHERE warehouse_id = ? AND product_id = ?`,
+			req.ToWarehouseId, req.ProductId,
+		).Scan(&resp.To.Remaining)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		// query inventory line for return
-
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement transferUnits")
+		writeJSON(w, http.StatusOK, resp)
 	}
 }
 
