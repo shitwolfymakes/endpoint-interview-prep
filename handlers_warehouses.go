@@ -251,10 +251,11 @@ func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 
 		// check if the warehouse has inventory
 		err = db.QueryRowContext(r.Context(),
-			`SELECT COUNT(*) FROM warehouses WHERE id = ?`,
+			`SELECT COUNT(*) FROM warehouse_inventory WHERE warehouse_id = ?`,
 			id,
 		).Scan(&n)
 		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		if n > 0 {
