@@ -811,31 +811,48 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 //     destination against its capacity (422 on overflow).
 func transferUnits(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// parse path params
+		id, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		// validate json params
 		var req struct {
 			ToWarehouseId int `json:"to_warehouse_id"`
 			ProductId     int `json:"product_id"`
 			Quantity      int `json:"quantity"`
 		}
-		err := decodeJSON(r, &req)
+		err = decodeJSON(r, &req)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
 		// validate request values
+		if req.Quantity <= 0 {
+			writeError(w, http.StatusBadRequest, "quantity must be positive")
+			return
+		}
+		if int(id) == req.ToWarehouseId {
+			writeError(w, http.StatusBadRequest, "warehouse ids cant be the same")
+			return
+		}
 
-		// parse path params
-
-		// check if warehouses exist
+		// check if warehouses are active or 404
 
 		// check if product exists
 
 		// get target warehouse capacity
 
-		// get existing utilization
+		// get target warehouse utilization
 
-		// run sql
+		// create tx
+
+		// subtract from current warehouse
+
+		// upsert into target warehouse
 
 		// query inventory line for return
 
