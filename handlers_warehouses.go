@@ -34,6 +34,11 @@ import (
 func createWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// validate JSON request
+		var req Warehouse
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
 		// validate request values
 
