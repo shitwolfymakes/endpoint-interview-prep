@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"time"
 )
 
 // ============================================================================
@@ -139,12 +140,41 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// parse path params
-		_, err := idParam(r, "id")
+		id, err := idParam(r, "id")
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 		}
 
 		// run the sql
+		_, err = db.ExecContext(r.Context(),
+			`UPDATE warehouses SET
+			code = ?,
+			name = ?,
+			address = ?,
+			capacity_units = ?,
+			status = ?,
+			updated_at = ?
+			WHERE id = ?`,
+			req.Code,
+			req.Name,
+			req.Address,
+			req.CapacityUnits,
+			req.Status,
+			time.Now(),
+			id,
+		)
+		if err != nil {
+			if isUniqueConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			if isCheckConstraintErr(err) {
+				writeError(w, http.StatusUnprocessableEntity, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// query row for return
 		_ = db
