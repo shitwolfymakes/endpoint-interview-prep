@@ -873,6 +873,20 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 		}
 
 		// check if product exists
+		var name string
+		err = db.QueryRowContext(r.Context(),
+			`SELECT name FROM products WHERE id = ?`, req.ProductId).
+			Scan(&name)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, fmt.Sprintf(
+					"product %d doesn't exist", req.ProductId,
+				))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// get target warehouse capacity
 
