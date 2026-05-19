@@ -841,6 +841,36 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 		}
 
 		// check if warehouses are active or 404
+		var cw Warehouse
+		err = db.QueryRowContext(r.Context(),
+			`SELECT capacity_units, status FROM warehouses WHERE id = ?`, id).
+			Scan(&cw.CapacityUnits, &cw.Status)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, fmt.Sprintf(
+					"warehouse %d doesn't exist", id,
+				))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		var tw Warehouse
+		err = db.QueryRowContext(r.Context(),
+			`SELECT capacity_units, status FROM warehouses WHERE id = ?`,
+			req.ToWarehouseId).
+			Scan(&tw.CapacityUnits, &tw.Status)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, fmt.Sprintf(
+					"warehouse %d doesn't exist", req.ToWarehouseId,
+				))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// check if product exists
 
