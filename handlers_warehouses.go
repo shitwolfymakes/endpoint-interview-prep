@@ -139,6 +139,10 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// parse path params
+		_, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
 
 		// run the sql
 
