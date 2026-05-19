@@ -871,6 +871,10 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if tw.Status == "closed" {
+			writeError(w, http.StatusConflict, "warehouse closed")
+			return
+		}
 
 		// check if product exists
 		var name string
@@ -906,6 +910,20 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 		}
 
 		// get target warehouse utilization
+		var utilization int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COALESCE(SUM(quantity), 0)
+			FROM warehouse_inventory
+			WHERE warehouse_id = ?`, req.ToWarehouseId,
+		).Scan(&utilization)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if tw.CapacityUnits < utilization+req.Quantity {
+			writeError(w, http.StatusUnprocessableEntity, "not enough capacity")
+			return
+		}
 
 		// create tx
 
