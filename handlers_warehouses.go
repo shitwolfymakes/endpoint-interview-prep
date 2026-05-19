@@ -351,11 +351,29 @@ func getWarehouse(db *sql.DB) http.HandlerFunc {
 func listWarehouseInventory(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// parse path param
-		_, err := idParam(r, "id")
+		id, err := idParam(r, "id")
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+
+		// check if warehouse exists
+		var n int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT 1 FROM warehouses WHERE id = ?`,
+			id,
+		).Scan(&n)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, fmt.Sprintf(
+					"warehouse %d doesn't exist", id,
+				))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement listWarehouseInventory")
 	}
