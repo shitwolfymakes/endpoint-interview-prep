@@ -225,6 +225,14 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 // the API contract is that a non-empty warehouse cannot be deleted.
 func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// parse path params
+		_, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// run sql
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement deleteWarehouse")
 	}
