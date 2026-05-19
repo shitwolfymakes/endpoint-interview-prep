@@ -374,8 +374,43 @@ func listWarehouseInventory(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement listWarehouseInventory")
+		// get inventory via join table
+		rows, err := db.QueryContext(r.Context(),
+			`SELECT wi.warehouse_id, wi.product_id, wi.quantity, p.name
+			FROM warehouse_inventory wi
+			JOIN products p ON p.id = wi.product_id
+			WHERE wi.warehouse_id = ?`, id,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer rows.Close()
+
+		type response struct {
+			Items []InventoryLine `json:"items"`
+		}
+		var items response
+		for rows.Next() {
+			var l InventoryLine
+			if err := rows.Scan(&l.WarehouseID, &l.ProductID,
+				&l.Quantity, &l.ProductName,
+			); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			items.Items = append(items.Items, l)
+		}
+		if err := rows.Err(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// normalize response to empty list
+		if items.Items == nil {
+			items.Items = []InventoryLine{}
+		}
+		writeJSON(w, http.StatusOK, items)
 	}
 }
 
