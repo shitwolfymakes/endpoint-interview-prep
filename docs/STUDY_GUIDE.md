@@ -278,18 +278,18 @@ a specific driver.
 
 ## HTTP status codes — when to use which
 
-| Code | Use it for                                                       |
-|-----:|:-----------------------------------------------------------------|
-| 200  | Successful GET / PUT / PATCH                                     |
-| 201  | Successful POST that created a resource (return the new entity)  |
-| 204  | Successful DELETE; empty body                                    |
-| 400  | Bad request: malformed body, unparseable id, missing field       |
-| 401  | Missing/invalid auth (we don't use this in this repo)            |
-| 403  | Authenticated but not allowed                                    |
-| 404  | The thing you asked for doesn't exist                            |
-| 409  | Conflict: duplicate UNIQUE, FK in use, illegal state transition  |
-| 422  | Body parses but violates a business rule (e.g. not enough stock) |
-| 500  | Unexpected server / DB error                                     |
+| Code | Name                  | Use it for                                                       |
+|-----:|:----------------------|:-----------------------------------------------------------------|
+| 200  | OK                    | Successful GET / PUT / PATCH                                     |
+| 201  | Created               | Successful POST that created a resource (return the new entity)  |
+| 204  | No Content            | Successful DELETE; empty body                                    |
+| 400  | Bad Request           | Bad request: malformed body, unparseable id, missing field       |
+| 401  | Unauthorized          | Missing/invalid auth (we don't use this in this repo)            |
+| 403  | Forbidden             | Authenticated but not allowed                                    |
+| 404  | Not Found             | The thing you asked for doesn't exist                            |
+| 409  | Conflict              | Conflict: duplicate UNIQUE, FK in use, illegal state transition  |
+| 422  | Unprocessable Entity  | Body parses but violates a business rule (e.g. not enough stock) |
+| 500  | Internal Server Error | Unexpected server / DB error                                     |
 
 When in doubt between 400 and 422: 400 = "I can't even parse this", 422 =
 "I parsed it fine, but it's not okay". When in doubt between 409 and 422:
