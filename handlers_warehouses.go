@@ -451,9 +451,9 @@ func listWarehousePersonnel(db *sql.DB) http.HandlerFunc {
 		// run sql
 		rows, err := db.QueryContext(r.Context(),
 			`SELECT p.id, p.email, p.name, p.role, p.warehouse_id,
-			p.hired_at, p.terminated_at
+			p.hired_at, COALESCE(p.terminated_at, '')
 			FROM personnel p
-			WHERE p.warehouse_id = ? and p.terminated_at = ""`,
+			WHERE p.warehouse_id = ? and p.terminated_at IS NULL`,
 			id,
 		)
 		if err != nil {
@@ -481,8 +481,10 @@ func listWarehousePersonnel(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement listWarehousePersonnel")
+		if items.Items == nil {
+			items.Items = []Personnel{}
+		}
+		writeJSON(w, http.StatusOK, items)
 	}
 }
 
