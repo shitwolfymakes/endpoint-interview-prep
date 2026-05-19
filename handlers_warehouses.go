@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 )
 
@@ -150,8 +151,33 @@ func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 // Mirrors getProduct.
 func getWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement getWarehouse")
+		// parse path param
+		id, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// query row and return
+		var response Warehouse
+		err = db.QueryRowContext(r.Context(),
+			`SELECT id, code, name, address, capacity_units, status,
+			created_at, updated_at
+			FROM warehouses
+			WHERE id = ?`, id).
+			Scan(&response.ID, &response.Code, &response.Name,
+				&response.Address, &response.CapacityUnits,
+				&response.Status, &response.CreatedAt,
+				&response.UpdatedAt)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
 	}
 }
 
