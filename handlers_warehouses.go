@@ -226,13 +226,31 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// parse path params
-		_, err := idParam(r, "id")
+		id, err := idParam(r, "id")
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
 		// run sql
+		result, err := db.ExecContext(r.Context(),
+			`DELETE FROM warehouses WHERE id = ?`,
+			id,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		found, _, err := rowsAffected(result)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !found {
+			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
+			return
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement deleteWarehouse")
 	}
