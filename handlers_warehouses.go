@@ -453,7 +453,7 @@ func listWarehousePersonnel(db *sql.DB) http.HandlerFunc {
 			`SELECT p.id, p.email, p.name, p.role, p.warehouse_id,
 			p.hired_at, p.terminated_at
 			FROM personnel p
-			WHERE p.warehouse_id = ? and p.terminated_at IS NULL`,
+			WHERE p.warehouse_id = ? and p.terminated_at = ""`,
 			id,
 		)
 		if err != nil {
@@ -461,6 +461,25 @@ func listWarehousePersonnel(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		defer rows.Close()
+
+		type response struct {
+			Items []Personnel `json:"items"`
+		}
+		var items response
+		for rows.Next() {
+			var p Personnel
+			if err := rows.Scan(&p.ID, &p.Email, &p.Name, &p.Role,
+				&p.WarehouseID, &p.HiredAt, &p.TerminatedAt,
+			); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			items.Items = append(items.Items, p)
+		}
+		if err := rows.Err(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement listWarehousePersonnel")
