@@ -644,8 +644,20 @@ func adjustWarehouseCapacity(db *sql.DB) http.HandlerFunc {
 func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// validate JSON request
+		var req struct {
+			Quantity int `json:"quantity"`
+		}
+		err := decodeJSON(r, &req)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
 		// validate request values
+		if req.Quantity < 0 {
+			writeError(w, http.StatusBadRequest, "quantity cannot be negative")
+			return
+		}
 
 		// parse path params
 
