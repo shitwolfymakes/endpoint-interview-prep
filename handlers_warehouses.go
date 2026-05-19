@@ -425,6 +425,17 @@ func listWarehouseInventory(db *sql.DB) http.HandlerFunc {
 //	404  if no warehouse has that id (existence check separate from row count)
 func listWarehousePersonnel(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// parse path param
+		_, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// check warehouse exists
+
+		// run sql
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement listWarehousePersonnel")
 	}
