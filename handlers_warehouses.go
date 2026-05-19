@@ -811,6 +811,34 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 //     destination against its capacity (422 on overflow).
 func transferUnits(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate json params
+		var req struct {
+			ToWarehouseId int `json:"to_warehouse_id"`
+			ProductId     int `json:"product_id"`
+			Quantity      int `json:"quantity"`
+		}
+		err := decodeJSON(r, &req)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// validate request values
+
+		// parse path params
+
+		// check if warehouses exist
+
+		// check if product exists
+
+		// get target warehouse capacity
+
+		// get existing utilization
+
+		// run sql
+
+		// query inventory line for return
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement transferUnits")
 	}
