@@ -350,6 +350,12 @@ func getWarehouse(db *sql.DB) http.HandlerFunc {
 // Mirrors listCustomerOrders.
 func listWarehouseInventory(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// parse path param
+		_, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement listWarehouseInventory")
 	}
