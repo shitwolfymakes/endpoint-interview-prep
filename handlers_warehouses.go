@@ -795,7 +795,15 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 //
 // Status codes:
 //
-//	200  on success — return {"from": Warehouse, "to": Warehouse}
+//	200  on success — return the deltas of what moved:
+//	     {
+//	       "product_id": int,
+//	       "quantity":   int,
+//	       "from": { "warehouse_id": int, "remaining": int },
+//	       "to":   { "warehouse_id": int, "remaining": int }
+//	     }
+//	     "remaining" is the post-transfer quantity of this product at each
+//	     warehouse (0 if no row exists on that side after the transfer).
 //	400  on invalid JSON, missing fields, non-positive quantity, unknown
 //	     warehouse/product, or same source and destination
 //	409  if either warehouse is closed (status != 'active')

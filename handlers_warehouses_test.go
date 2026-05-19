@@ -400,6 +400,33 @@ func TestTransferUnits(t *testing.T) {
 		rec := do(t, srv, "POST", "/warehouses/1/transfer", body)
 		expectStatus(t, rec, 200)
 
+		// Response should describe what moved and the new stock at each end.
+		var resp struct {
+			ProductID int `json:"product_id"`
+			Quantity  int `json:"quantity"`
+			From      struct {
+				WarehouseID int `json:"warehouse_id"`
+				Remaining   int `json:"remaining"`
+			} `json:"from"`
+			To struct {
+				WarehouseID int `json:"warehouse_id"`
+				Remaining   int `json:"remaining"`
+			} `json:"to"`
+		}
+		decodeBody(t, rec, &resp)
+		if resp.ProductID != 1 {
+			t.Errorf("expected product_id=1, got %d", resp.ProductID)
+		}
+		if resp.Quantity != 30 {
+			t.Errorf("expected quantity=30, got %d", resp.Quantity)
+		}
+		if resp.From.WarehouseID != 1 || resp.From.Remaining != 70 {
+			t.Errorf("expected from={warehouse_id:1, remaining:70}, got %+v", resp.From)
+		}
+		if resp.To.WarehouseID != 3 || resp.To.Remaining != 30 {
+			t.Errorf("expected to={warehouse_id:3, remaining:30}, got %+v", resp.To)
+		}
+
 		// Source should now hold 70.
 		rec2 := do(t, srv, "GET", "/warehouses/1/inventory", nil)
 		var src struct {
