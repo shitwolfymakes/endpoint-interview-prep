@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // ============================================================================
@@ -660,6 +663,53 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 		}
 
 		// parse path params
+		id, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		raw := chi.URLParam(r, "product_id")
+		if raw == "" {
+			writeError(w, http.StatusBadRequest, "product_id cannot be empty")
+			return
+		}
+		productId, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "not valid integer")
+			return
+		}
+
+		// check if warehouse exists
+		var n int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT 1 FROM warehouses WHERE id = ?`, id).
+			Scan(&n)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, fmt.Sprintf(
+					"warehouse %d doesn't exist", id,
+				))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// check if product exists
+		err = db.QueryRowContext(r.Context(),
+			`SELECT 1 FROM products WHERE id = ?`, productId).
+			Scan(&n)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, fmt.Sprintf(
+					"product %d doesn't exist", productId,
+				))
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// get existing warehouse capacity
 
