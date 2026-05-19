@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -175,14 +176,18 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-
-		// query row for return
-		id, err = result.LastInsertId()
+		// 404 check
+		found, _, err := rowsAffected(result)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if !found {
+			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
+			return
+		}
 
+		// query row for return
 		var response Warehouse
 		err = db.QueryRowContext(r.Context(),
 			`SELECT id, code, name, address, capacity_units, status,
