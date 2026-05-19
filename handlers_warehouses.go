@@ -697,9 +697,10 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 		}
 
 		// check if product exists
+		var name string
 		err = db.QueryRowContext(r.Context(),
-			`SELECT 1 FROM products WHERE id = ?`, productId).
-			Scan(&n)
+			`SELECT name FROM products WHERE id = ?`, productId).
+			Scan(&name)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusNotFound, fmt.Sprintf(
@@ -744,6 +745,24 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run sql
+		results, err := db.ExecContext(r.Context(),
+			`INSERT INTO warehouse_inventory
+			warehouse_id = ?,
+			product_id = ?,
+			quantity = ?,
+			product_name = ?
+			ON CONFLICT (warehouse_id, product_id)
+			DO UPDATE SET quantity = ?`,
+			id,
+			productId,
+			req.Quantity,
+			name,
+			req.Quantity,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// query inventory line for return
 		_ = db
