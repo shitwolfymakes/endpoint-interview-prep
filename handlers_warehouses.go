@@ -745,18 +745,14 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run sql
-		results, err := db.ExecContext(r.Context(),
+		_, err = db.ExecContext(r.Context(),
 			`INSERT INTO warehouse_inventory
-			warehouse_id = ?,
-			product_id = ?,
-			quantity = ?,
-			product_name = ?
+			(warehouse_id, product_id, quantity)
+			VALUES (?, ?, ?)
 			ON CONFLICT (warehouse_id, product_id)
-			DO UPDATE SET quantity = ?`,
+			DO UPDATE SET quantity = excluded.quantity`,
 			id,
 			productId,
-			req.Quantity,
-			name,
 			req.Quantity,
 		)
 		if err != nil {
@@ -765,8 +761,23 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 		}
 
 		// query inventory line for return
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement setWarehouseInventory")
+		var response InventoryLine
+		err = db.QueryRowContext(r.Context(),
+			`SELECT wi.warehouse_id, wi.product_id, wi.quantity, p.name
+			FROM warehouse_inventory wi
+			JOIN products p ON p.id = wi.product_id
+			WHERE wi.warehouse_id = ?
+			    AND wi.product_id = ?`,
+			id, productId).
+			Scan(&response.WarehouseID, &response.ProductID,
+				&response.Quantity, &response.ProductName,
+			)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusOK, response)
 	}
 }
 
