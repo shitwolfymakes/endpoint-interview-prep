@@ -863,6 +863,10 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if cw.Status == "closed" {
+			writeError(w, http.StatusConflict, "source warehouse closed")
+			return
+		}
 
 		var tw Warehouse
 		err = db.QueryRowContext(r.Context(),
@@ -880,7 +884,7 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if tw.Status == "closed" {
-			writeError(w, http.StatusConflict, "warehouse closed")
+			writeError(w, http.StatusConflict, "dest warehouse closed")
 			return
 		}
 
