@@ -232,9 +232,27 @@ func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// run sql
+		// check id warehouse has personnel
+		var n int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COUNT(*) FROM personnel WHERE warehouse_id = ?`,
+			id,
+		).Scan(&n)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if n > 0 {
+			writeError(w, http.StatusConflict, fmt.Sprintf(
+				"%d personnel still assigned to warehouse %d", n, id,
+			))
+			return
+		}
+
+		// run sql, ensure capacity is zero
 		result, err := db.ExecContext(r.Context(),
-			`DELETE FROM warehouses WHERE id = ?`,
+			`DELETE FROM warehouses WHERE id = ?
+			AND capacity_units = 0`,
 			id,
 		)
 		if err != nil {
