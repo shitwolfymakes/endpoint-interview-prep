@@ -568,6 +568,35 @@ func adjustWarehouseCapacity(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run sql
+		results, err := db.ExecContext(r.Context(),
+			`UPDATE warehouses SET
+			capacity_units = capacity_units + ?
+			WHERE id = ?
+			    AND capacity_units + ? >= 0
+				AND capacity_units + ? >= ?
+			`,
+			req.Delta,
+			id,
+			req.Delta,
+			req.Delta, utilization,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// check if rows were affected
+		_, num, err := rowsAffected(results)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if num == 0 {
+			writeError(w, http.StatusUnprocessableEntity, fmt.Sprintln(
+				"invalid delta",
+			))
+			return
+		}
 
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement adjustWarehouseCapacity")
