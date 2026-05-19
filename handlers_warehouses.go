@@ -449,6 +449,18 @@ func listWarehousePersonnel(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run sql
+		rows, err := db.QueryContext(r.Context(),
+			`SELECT p.id, p.email, p.name, p.role, p.warehouse_id,
+			p.hired_at, p.terminated_at
+			FROM personnel p
+			WHERE p.warehouse_id = ? and p.terminated_at IS NULL`,
+			id,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer rows.Close()
 
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement listWarehousePersonnel")
