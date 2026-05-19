@@ -58,7 +58,7 @@ func createWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run query
-		_, err := db.ExecContext(r.Context(),
+		result, err := db.ExecContext(r.Context(),
 			`INSERT INTO warehouses 
 			(code, name, address, capacity_units, status) 
 			VALUES (?, ?, ?, ?, ?)`,
@@ -75,8 +75,28 @@ func createWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// query row for response
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement createWarehouse")
+		id, err := result.LastInsertId()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		var response Warehouse
+		err = db.QueryRowContext(r.Context(),
+			`SELECT id, code, name, address, capacity_units, status,
+			created_at, updated_at
+			FROM warehouses
+			WHERE id = ?`, id).
+			Scan(&response.ID, &response.Code, &response.Name,
+				&response.Address, &response.CapacityUnits,
+				&response.Status, &response.CreatedAt,
+				&response.UpdatedAt)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, response)
 	}
 }
 
