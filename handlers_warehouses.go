@@ -55,10 +55,24 @@ func createWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 		if req.Status != "closed" {
 			req.Status = "active"
-			return
 		}
 
 		// run query
+		_, err := db.ExecContext(r.Context(),
+			`INSERT INTO warehouses 
+			(code, name, address, capacity_units, status) 
+			VALUES (?, ?, ?, ?, ?)`,
+			req.Code, req.Name, req.Address,
+			req.CapacityUnits, req.Status,
+		)
+		if err != nil {
+			if isUniqueConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// query row for response
 		_ = db
