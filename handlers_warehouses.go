@@ -146,7 +146,7 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run the sql
-		_, err = db.ExecContext(r.Context(),
+		result, err := db.ExecContext(r.Context(),
 			`UPDATE warehouses SET
 			code = ?,
 			name = ?,
@@ -177,8 +177,31 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// query row for return
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement updateWarehouse")
+		id, err = result.LastInsertId()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		var response Warehouse
+		err = db.QueryRowContext(r.Context(),
+			`SELECT id, code, name, address, capacity_units, status,
+			created_at, updated_at
+			FROM warehouses
+			WHERE id = ?`, id).
+			Scan(&response.ID, &response.Code, &response.Name,
+				&response.Address, &response.CapacityUnits,
+				&response.Status, &response.CreatedAt,
+				&response.UpdatedAt)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response)
 	}
 }
 
