@@ -643,6 +643,21 @@ func adjustWarehouseCapacity(db *sql.DB) http.HandlerFunc {
 //     quantity = excluded.quantity
 func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+
+		// validate request values
+
+		// parse path params
+
+		// get existing warehouse capacity
+
+		// get existing utilization
+
+		// check for invalidity
+
+		// run sql
+
+		// query inventory line for return
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement setWarehouseInventory")
 	}
