@@ -712,10 +712,36 @@ func setWarehouseInventory(db *sql.DB) http.HandlerFunc {
 		}
 
 		// get existing warehouse capacity
+		var capacity int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT capacity_units
+			FROM warehouses
+			WHERE id = ?`, id,
+		).Scan(&capacity)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if req.Quantity > capacity {
+			writeError(w, http.StatusUnprocessableEntity, "not enough capacity")
+			return
+		}
 
 		// get existing utilization
-
-		// check for invalidity
+		var utilization int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COALESCE(SUM(quantity), 0)
+			FROM warehouse_inventory
+			WHERE warehouse_id = ?`, id,
+		).Scan(&utilization)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if capacity < utilization+req.Quantity {
+			writeError(w, http.StatusUnprocessableEntity, "not enough capacity")
+			return
+		}
 
 		// run sql
 
