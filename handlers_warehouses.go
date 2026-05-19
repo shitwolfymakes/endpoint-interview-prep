@@ -538,6 +538,7 @@ func adjustWarehouseCapacity(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+
 		// check if warehouse exists
 		var n int
 		err = db.QueryRowContext(r.Context(),
@@ -550,6 +551,18 @@ func adjustWarehouseCapacity(db *sql.DB) http.HandlerFunc {
 				))
 				return
 			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// get warehouse utilization
+		var utilization int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COALESCE(SUM(quantity), 0)
+			FROM warehouse_inventory
+			WHERE warehouse_id = ?`, id,
+		).Scan(&utilization)
+		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
