@@ -888,7 +888,22 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// get target warehouse capacity
+		// get source warehouse stock
+		var stock int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COALESCE(SUM(quantity), 0)
+			FROM warehouse_inventory
+			WHERE warehouse_id = ? AND product_id = ?`,
+			req.ToWarehouseId, req.ProductId,
+		).Scan(&stock)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if req.Quantity > stock {
+			writeError(w, http.StatusUnprocessableEntity, "stock insufficient")
+			return
+		}
 
 		// get target warehouse utilization
 
