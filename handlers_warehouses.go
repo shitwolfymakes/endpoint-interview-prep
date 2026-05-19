@@ -122,6 +122,21 @@ func updateWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// validate request values
+		if req.Code == "" {
+			writeError(w, http.StatusBadRequest, "Code cannot be empty")
+			return
+		}
+		if req.Name == "" {
+			writeError(w, http.StatusBadRequest, "Name cannot be empty")
+			return
+		}
+		if req.CapacityUnits < 0 {
+			writeError(w, http.StatusBadRequest, "capacity cannot be negative")
+			return
+		}
+		if req.Status != "closed" {
+			req.Status = "active"
+		}
 
 		// parse path params
 
