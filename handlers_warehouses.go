@@ -232,8 +232,39 @@ func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// check id warehouse has personnel
+		// check if warehouse exists
 		var n int
+		err = db.QueryRowContext(r.Context(),
+			`SELECT 1 FROM warehouses WHERE id = ?`,
+			id,
+		).Scan(&n)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, fmt.Sprintf(
+					"warehouse %d not found", id),
+				)
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// check if the warehouse has inventory
+		err = db.QueryRowContext(r.Context(),
+			`SELECT COUNT(*) FROM warehouses WHERE id = ?`,
+			id,
+		).Scan(&n)
+		if err != nil {
+			return
+		}
+		if n > 0 {
+			writeError(w, http.StatusConflict, fmt.Sprintf(
+				"warehouse %d still has %d units in use", id, n),
+			)
+			return
+		}
+
+		// check if warehouse has personnel
 		err = db.QueryRowContext(r.Context(),
 			`SELECT COUNT(*) FROM personnel WHERE warehouse_id = ?`,
 			id,
@@ -249,23 +280,13 @@ func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// run sql, ensure capacity is zero
-		result, err := db.ExecContext(r.Context(),
-			`DELETE FROM warehouses WHERE id = ?
-			AND capacity_units = 0`,
+		// run sql
+		_, err = db.ExecContext(r.Context(),
+			`DELETE FROM warehouses WHERE id = ?`,
 			id,
 		)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		found, _, err := rowsAffected(result)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if !found {
-			writeError(w, http.StatusNotFound, fmt.Sprintf("id %d not found", id))
 			return
 		}
 
