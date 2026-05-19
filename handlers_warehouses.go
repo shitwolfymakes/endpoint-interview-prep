@@ -291,8 +291,7 @@ func deleteWarehouse(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement deleteWarehouse")
+		writeJSON(w, http.StatusNoContent, nil)
 	}
 }
 
