@@ -522,6 +522,16 @@ func listWarehousePersonnel(db *sql.DB) http.HandlerFunc {
 // Mirrors adjustStock.
 func adjustWarehouseCapacity(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req struct {
+			Delta int `json:"delta"`
+		}
+		err := decodeJSON(r, &req)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		// parse path params
 		id, err := idParam(r, "id")
 		if err != nil {
@@ -545,6 +555,7 @@ func adjustWarehouseCapacity(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run sql
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement adjustWarehouseCapacity")
 	}
