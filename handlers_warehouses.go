@@ -926,10 +926,47 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 		}
 
 		// create tx
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer tx.Commit()
 
 		// subtract from current warehouse
+		results, err := tx.ExecContext(r.Context(),
+			`UPDATE warehouse_inventory wi SET
+			quantity = quantity - ?
+			WHERE wi.warehouse_id = ? AND product_id = ?`,
+			req.Quantity, id, req.ProductId,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		cw_id, err := results.LastInsertId()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// upsert into target warehouse
+		results, err = tx.ExecContext(r.Context(),
+			`INSERT INTO warehouse_inventory
+			(warehouse_id, product_id, quantity)
+			VALUES (?, ?, ?)
+			ON CONFLICT SET quantity = quantity + excluded.quantity`,
+			req.Quantity, id, req.ProductId,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		tw_id, err := results.LastInsertId()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// query inventory line for return
 
