@@ -115,6 +115,19 @@ func createWarehouse(db *sql.DB) http.HandlerFunc {
 // Hint: bump updated_at in the UPDATE.
 func updateWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req Warehouse
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
+
+		// validate request values
+
+		// parse path params
+
+		// run the sql
+
+		// query row for return
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement updateWarehouse")
 	}
