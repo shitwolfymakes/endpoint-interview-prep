@@ -509,6 +509,7 @@ func bulkCreateProducts(db *sql.DB) http.HandlerFunc {
 		}
 		if len(req.Products) == 0 {
 			writeError(w, http.StatusBadRequest, "list cannot be empty")
+			return
 		}
 
 		// validate request values
