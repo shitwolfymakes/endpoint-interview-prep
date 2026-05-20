@@ -281,8 +281,32 @@ func updatePersonnel(db *sql.DB) http.HandlerFunc {
 // their terminated_at via the regular PUT instead.
 func deletePersonnel(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement deletePersonnel")
+		// parse path param
+		id, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// run the sql
+		result, err := db.ExecContext(r.Context(),
+			`DELETE FROM personnel WHERE id = ?`, id,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		found, _, err := rowsAffected(result)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !found {
+			writeError(w, http.StatusNotFound, "id not found")
+			return
+		}
+
+		writeJSON(w, http.StatusNoContent, nil)
 	}
 }
 
