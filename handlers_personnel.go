@@ -205,8 +205,34 @@ func getPersonnel(db *sql.DB) http.HandlerFunc {
 				&resp.WarehouseID, &resp.HiredAt, &resp.TerminatedAt,
 			)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
+		}
+
+		if resp.WarehouseID != nil {
+			var wh Warehouse
+			err = db.QueryRowContext(r.Context(),
+				`SELECT id, code, name, address, capacity_units, status,
+				created_at, updated_at
+				FROM warehouses
+				WHERE id = ?`, id).
+				Scan(&wh.ID, &wh.Code, &wh.Name,
+					&wh.Address, &wh.CapacityUnits,
+					&wh.Status, &wh.CreatedAt,
+					&wh.UpdatedAt)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, err.Error())
+					return
+				}
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			resp.Warehouse = &wh
 		}
 
 		writeJSON(w, http.StatusOK, resp)
