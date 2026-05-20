@@ -106,10 +106,34 @@ func createPersonnel(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// query row for return
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement createPersonnel")
+		var resp Personnel
+		err = tx.QueryRowContext(r.Context(),
+			`SELECT id, email, name, role, warehouse_id,
+			hired_at, 
+			COALESCE(terminated_at, '')
+			FROM personnel WHERE id = ?`, id).
+			Scan(&resp.ID, &resp.Email, &resp.Name, &resp.Role,
+				&resp.WarehouseID, &resp.HiredAt, &resp.TerminatedAt,
+			)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// commit tx
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, resp)
 	}
 }
 
