@@ -1198,6 +1198,13 @@ func bulkCreateWarehouses(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
+		// create tx
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
+		defer tx.Rollback()
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreateWarehouses")
 	}
