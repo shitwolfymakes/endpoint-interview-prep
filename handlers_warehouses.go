@@ -1166,6 +1166,38 @@ func closeWarehouse(db *sql.DB) http.HandlerFunc {
 //	     inside the batch
 func bulkCreateWarehouses(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req struct {
+			Warehouses []Warehouse `json:"warehouses"`
+		}
+		if err := decodeJSON(r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if len(req.Warehouses) == 0 {
+			writeError(w, http.StatusBadRequest, "list cannot be empty")
+			return
+		}
+
+		// validate request values
+		for _, wh := range req.Warehouses {
+			if wh.Code == "" {
+				writeError(w, http.StatusBadRequest, "Code cannot be empty")
+				return
+			}
+			if wh.Name == "" {
+				writeError(w, http.StatusBadRequest, "Name cannot be empty")
+				return
+			}
+			if wh.CapacityUnits < 0 {
+				writeError(w, http.StatusBadRequest, "capacity cannot be negative")
+				return
+			}
+			if wh.Status != "closed" {
+				wh.Status = "active"
+			}
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreateWarehouses")
 	}
