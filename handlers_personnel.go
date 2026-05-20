@@ -150,8 +150,122 @@ func createPersonnel(db *sql.DB) http.HandlerFunc {
 //	     or closed warehouse
 func updatePersonnel(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement updatePersonnel")
+		// parse path param
+		id, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// validate JSON request
+		var req Personnel
+		err = decodeJSON(r, &req)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// validate request values
+		if req.Email == "" {
+			writeError(w, http.StatusBadRequest, "email cannot be empty")
+			return
+		}
+		if req.Name == "" {
+			writeError(w, http.StatusBadRequest, "name cannot be empty")
+			return
+		}
+		validRoles := []string{"manager", "clerk", "picker", "driver"}
+		if !slices.Contains(validRoles, req.Role) {
+			writeError(w, http.StatusBadRequest, "invalid role")
+			return
+		}
+
+		// create tx
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer tx.Rollback()
+
+		// check that warehouse exists and is active
+		if req.WarehouseID != nil {
+			var status string
+			err = tx.QueryRowContext(r.Context(),
+				`SELECT status FROM warehouses WHERE id = ?`,
+				*req.WarehouseID).
+				Scan(&status)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, err.Error())
+					return
+				}
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if status == "closed" {
+				writeError(w, http.StatusConflict,
+					"warehouse cannot be closed",
+				)
+				return
+			}
+		}
+
+		// run the sql
+		result, err := tx.ExecContext(r.Context(),
+			`UPDATE personnel SET
+			email = ?,
+			name = ?,
+			role = ?,
+			warehouse_id = ?,
+			hired_at = ?
+			WHERE id = ?`,
+			req.Email, req.Name, req.Role, req.WarehouseID, time.Now(), id,
+		)
+		if err != nil {
+			if isUniqueConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			if isCheckConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		found, _, err := rowsAffected(result)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !found {
+			writeError(w, http.StatusNotFound, "id not found")
+			return
+		}
+
+		// query row for return
+		var resp Personnel
+		err = tx.QueryRowContext(r.Context(),
+			`SELECT id, email, name, role, warehouse_id,
+			hired_at, 
+			COALESCE(terminated_at, '')
+			FROM personnel WHERE id = ?`, id).
+			Scan(&resp.ID, &resp.Email, &resp.Name, &resp.Role,
+				&resp.WarehouseID, &resp.HiredAt, &resp.TerminatedAt,
+			)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// commit tx
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusOK, resp)
 	}
 }
 
