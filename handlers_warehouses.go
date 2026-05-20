@@ -1043,7 +1043,7 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 func closeWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// parse path params
-		_, err := idParam(r, "id")
+		id, err := idParam(r, "id")
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -1056,6 +1056,20 @@ func closeWarehouse(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		defer tx.Rollback()
+
+		// check select warehouse status and check 404
+		var status string
+		err = tx.QueryRowContext(r.Context(),
+			`SELECT status FROM warehouses WHERE id = ?`, id).
+			Scan(&status)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement closeWarehouse")
