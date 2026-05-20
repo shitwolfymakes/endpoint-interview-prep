@@ -1110,6 +1110,19 @@ func closeWarehouse(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run sql
+		_, err = tx.ExecContext(r.Context(),
+			`UPDATE warehouses SET
+			status = ?,
+			updated_at = ?
+			WHERE id = ?`,
+			"closed",
+			time.Now(),
+			id,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// query the row for the return
 		var resp Warehouse
