@@ -1042,6 +1042,21 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 //   - Then UPDATE warehouses SET status='closed', updated_at=... WHERE id=?
 func closeWarehouse(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// parse path params
+		_, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// create tx
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer tx.Rollback()
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement closeWarehouse")
 	}
