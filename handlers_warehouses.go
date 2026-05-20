@@ -1180,7 +1180,7 @@ func bulkCreateWarehouses(db *sql.DB) http.HandlerFunc {
 		}
 
 		// validate request values
-		for _, wh := range req.Warehouses {
+		for i, wh := range req.Warehouses {
 			if wh.Code == "" {
 				writeError(w, http.StatusBadRequest, "Code cannot be empty")
 				return
@@ -1194,7 +1194,7 @@ func bulkCreateWarehouses(db *sql.DB) http.HandlerFunc {
 				return
 			}
 			if wh.Status != "closed" {
-				wh.Status = "active"
+				req.Warehouses[i].Status = "active"
 			}
 		}
 
@@ -1205,7 +1205,62 @@ func bulkCreateWarehouses(db *sql.DB) http.HandlerFunc {
 		}
 		defer tx.Rollback()
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement bulkCreateWarehouses")
+		// insert rows
+		type response struct {
+			Items []Warehouse `json:"items"`
+		}
+		var resp response
+		for _, wh := range req.Warehouses {
+			result, err := tx.ExecContext(r.Context(),
+				`INSERT INTO warehouses
+				(code, name, address, capacity_units, status)
+				VALUES (?, ?, ?, ?, ?)`,
+				wh.Code, wh.Name, wh.Address,
+				wh.CapacityUnits, wh.Status,
+			)
+			if err != nil {
+				if isUniqueConstraintErr(err) {
+					writeJSON(w, http.StatusConflict, wh)
+					return
+				}
+				if isCheckConstraintErr(err) {
+					writeJSON(w, http.StatusUnprocessableEntity, wh)
+					return
+				}
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			id, err := result.LastInsertId()
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			var row Warehouse
+			err = tx.QueryRowContext(r.Context(),
+				`SELECT id, code, name, address, capacity_units, status,
+				created_at, updated_at
+				FROM warehouses
+				WHERE id = ?`, id).
+				Scan(&row.ID, &row.Code, &row.Name, &row.Address,
+					&row.CapacityUnits, &row.Status, &row.CreatedAt,
+					&row.UpdatedAt)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			resp.Items = append(resp.Items, row)
+		}
+
+		// commit transaction
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// normalize and write response
+		if resp.Items == nil {
+			resp.Items = []Warehouse{}
+		}
+		writeJSON(w, http.StatusCreated, resp)
 	}
 }
