@@ -187,8 +187,29 @@ func deletePersonnel(db *sql.DB) http.HandlerFunc {
 // Mirrors getOrder, which embeds Customer the same way.
 func getPersonnel(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement getPersonnel")
+		// parse path param
+		id, err := idParam(r, "id")
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// query for return
+		var resp Personnel
+		err = db.QueryRowContext(r.Context(),
+			`SELECT id, email, name, role, warehouse_id,
+			hired_at, 
+			COALESCE(terminated_at, '')
+			FROM personnel WHERE id = ?`, id).
+			Scan(&resp.ID, &resp.Email, &resp.Name, &resp.Role,
+				&resp.WarehouseID, &resp.HiredAt, &resp.TerminatedAt,
+			)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusOK, resp)
 	}
 }
 
