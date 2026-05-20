@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"slices"
+	"time"
 )
 
 // ============================================================================
@@ -86,6 +87,25 @@ func createPersonnel(db *sql.DB) http.HandlerFunc {
 		}
 
 		// run the sql
+		result, err := tx.ExecContext(r.Context(),
+			`INSERT INTO personnel
+			(email, name, role, warehouse_id, hired_at)
+			VALUES
+			(?, ?, ?, ?, ?)`,
+			req.Email, req.Name, req.Role, req.WarehouseID, time.Now(),
+		)
+		if err != nil {
+			if isUniqueConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			if isCheckConstraintErr(err) {
+				writeError(w, http.StatusConflict, err.Error())
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// query row for return
 		_ = db
