@@ -1070,6 +1070,10 @@ func closeWarehouse(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if status == "closed" {
+			writeError(w, http.StatusConflict, "source warehouse closed")
+			return
+		}
 
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement closeWarehouse")
