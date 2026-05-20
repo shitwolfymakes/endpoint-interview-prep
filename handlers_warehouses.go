@@ -848,9 +848,17 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// create tx
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer tx.Rollback()
+
 		// check if warehouses are active or 404
 		var cw Warehouse
-		err = db.QueryRowContext(r.Context(),
+		err = tx.QueryRowContext(r.Context(),
 			`SELECT capacity_units, status FROM warehouses WHERE id = ?`, id).
 			Scan(&cw.CapacityUnits, &cw.Status)
 		if err != nil {
@@ -869,7 +877,7 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 		}
 
 		var tw Warehouse
-		err = db.QueryRowContext(r.Context(),
+		err = tx.QueryRowContext(r.Context(),
 			`SELECT capacity_units, status FROM warehouses WHERE id = ?`,
 			req.ToWarehouseId).
 			Scan(&tw.CapacityUnits, &tw.Status)
@@ -890,7 +898,7 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 
 		// check if product exists
 		var name string
-		err = db.QueryRowContext(r.Context(),
+		err = tx.QueryRowContext(r.Context(),
 			`SELECT name FROM products WHERE id = ?`, req.ProductId).
 			Scan(&name)
 		if err != nil {
@@ -906,7 +914,7 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 
 		// get source warehouse stock
 		var stock int
-		err = db.QueryRowContext(r.Context(),
+		err = tx.QueryRowContext(r.Context(),
 			`SELECT COALESCE(SUM(quantity), 0)
 			FROM warehouse_inventory
 			WHERE warehouse_id = ? AND product_id = ?`,
@@ -923,7 +931,7 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 
 		// get target warehouse utilization
 		var utilization int
-		err = db.QueryRowContext(r.Context(),
+		err = tx.QueryRowContext(r.Context(),
 			`SELECT COALESCE(SUM(quantity), 0)
 			FROM warehouse_inventory
 			WHERE warehouse_id = ?`, req.ToWarehouseId,
@@ -936,14 +944,6 @@ func transferUnits(db *sql.DB) http.HandlerFunc {
 			writeError(w, http.StatusUnprocessableEntity, "not enough capacity")
 			return
 		}
-
-		// create tx
-		tx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		defer tx.Rollback()
 
 		// subtract from current warehouse
 		_, err = tx.ExecContext(r.Context(),
