@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
+	"slices"
 )
 
 // ============================================================================
@@ -39,6 +41,49 @@ func createPersonnel(db *sql.DB) http.HandlerFunc {
 		}
 
 		// validate request values
+		if req.Email == "" {
+			writeError(w, http.StatusBadRequest, "email cannot be empty")
+			return
+		}
+		if req.Name == "" {
+			writeError(w, http.StatusBadRequest, "name cannot be empty")
+			return
+		}
+		validRoles := []string{"manager", "clerk", "picker", "driver"}
+		if !slices.Contains(validRoles, req.Role) {
+			writeError(w, http.StatusBadRequest, "invalid role")
+			return
+		}
+
+		// create tx
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		defer tx.Rollback()
+
+		// check that warehouse exists and is active
+		if req.WarehouseID != nil {
+			var status string
+			err = tx.QueryRowContext(r.Context(),
+				`SELECT status FROM warehouses WHERE id = ?`,
+				*req.WarehouseID).
+				Scan(&status)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusNotFound, err.Error())
+				}
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if status == "closed" {
+				writeError(w, http.StatusConflict,
+					"warehouse cannot be closed",
+				)
+				return
+			}
+		}
 
 		// run the sql
 
