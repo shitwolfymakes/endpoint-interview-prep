@@ -1075,6 +1075,40 @@ func closeWarehouse(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// check for remaining stock
+		var stock int
+		err = tx.QueryRowContext(r.Context(),
+			`SELECT COALESCE(SUM(quantity), 0)
+			FROM warehouse_inventory
+			WHERE warehouse_id = ?`,
+			id,
+		).Scan(&stock)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if stock > 0 {
+			writeError(w, http.StatusConflict, "warehouse not empty")
+			return
+		}
+
+		// check for remaining personnel
+		var personnel int
+		err = tx.QueryRowContext(r.Context(),
+			`SELECT COUNT(*)
+			FROM personnel
+			WHERE warehouse_id = ? and terminated_at IS NULL`,
+			id,
+		).Scan(&personnel)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if personnel > 0 {
+			writeError(w, http.StatusConflict, "warehouse still staffed")
+			return
+		}
+
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement closeWarehouse")
 	}
