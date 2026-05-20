@@ -30,6 +30,19 @@ import (
 // Mirrors createProduct.
 func createPersonnel(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// validate JSON request
+		var req Personnel
+		err := decodeJSON(r, &req)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// validate request values
+
+		// run the sql
+
+		// query row for return
 		_ = db
 		writeError(w, http.StatusNotImplemented, "TODO: implement createPersonnel")
 	}
