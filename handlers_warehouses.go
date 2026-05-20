@@ -1109,8 +1109,30 @@ func closeWarehouse(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_ = db
-		writeError(w, http.StatusNotImplemented, "TODO: implement closeWarehouse")
+		// run sql
+
+		// query the row for the return
+		var resp Warehouse
+		err = tx.QueryRowContext(r.Context(),
+			`SELECT id, code, name, address, capacity_units,
+			status, created_at, updated_at
+			FROM warehouses
+			WHERE id = ?
+			`, id).Scan(
+			&resp.ID, &resp.Code, &resp.Name, &resp.Address,
+			&resp.CapacityUnits, &resp.Status, &resp.CreatedAt,
+			&resp.UpdatedAt,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeJSON(w, http.StatusOK, resp)
 	}
 }
 
